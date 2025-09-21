@@ -105,6 +105,7 @@ class SSDHead(AnchorHead):
         self.bbox_coder = TASK_UTILS.build(bbox_coder)
         self.reg_decoded_bbox = reg_decoded_bbox
         self.use_sigmoid_cls = False
+        self.loss_cls = nn.CrossEntropyLoss(reduction='none')
         self.cls_focal_loss = False
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg

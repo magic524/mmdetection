@@ -37,8 +37,8 @@ test_pipeline = [
                    'scale_factor'))
 ]
 train_dataloader = dict(
-    batch_size=8,
-    num_workers=2,
+    batch_size=16,
+    num_workers=4,
     batch_sampler=None,
     dataset=dict(
         _delete_=True,
@@ -79,12 +79,16 @@ model = dict(
         bgr_to_rgb=True,
         pad_size_divisor=1),
     backbone=dict(
-        type='VGG',
-        depth=16,
-        with_last_pool=False,
-        ceil_mode=True,
-        out_indices=(3, 4, 7, 8, 9),
-        init_cfg=dict(type='Pretrained', checkpoint='open-mmlab://vgg16_caffe')),
+        type='ResNet',
+        depth=50,  # ResNet-50
+        num_stages=4,
+        out_indices=(0, 1, 2, 3),  # 多尺度特征图
+        frozen_stages=1,
+        norm_cfg=dict(type='BN', requires_grad=True),
+        norm_eval=True,
+        style='pytorch',
+        init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet50')
+    ),
     neck=None,
     bbox_head=dict(
         type='SSDHead',
@@ -102,3 +106,19 @@ model = dict(
         loss_cls=dict(type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0)
     )
 )
+
+# -------------------- 数据集配置 --------------------
+dataset_type = 'CocoDataset'
+data_root = '/data/Small_Objects_Dataset/VisDrone/'
+img_scale = (640, 640)
+
+classes = (
+    'pedestrian', 'people', 'bicycle', 'car', 'van', 'truck',
+    'tricycle', 'awning-tricycle', 'bus', 'motor'
+)
+
+# -------------------- 自定义训练配置 --------------------
+train_cfg = dict(max_epochs=120)
+param_scheduler = [
+    dict(type='MultiStepLR', by_epoch=True, milestones=[36, 44], gamma=0.1)
+]
