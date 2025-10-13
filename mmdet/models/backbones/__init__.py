@@ -13,15 +13,20 @@ from .regnet import RegNet
 from .res2net import Res2Net
 from .resnest import ResNeSt
 from .resnet import ResNet, ResNetV1d
+from .resnet_adown import ResNetADownStem
+from .resnet_adown_stages import ResNetADownStages
 from .resnext import ResNeXt
 from .ssd_vgg import SSDVGG
 from .swin import SwinTransformer
 from .trident_resnet import TridentResNet
 
+from .resnet_adown_stages import ResNetADownStages
+from .resnet_adown_parallel import ResNetADownParallel
+
 __all__ = [
-    'RegNet', 'ResNet', 'ResNetV1d', 'ResNeXt', 'SSDVGG', 'HRNet',
-    'MobileNetV2', 'Res2Net', 'HourglassNet', 'DetectoRS_ResNet',
-    'DetectoRS_ResNeXt', 'Darknet', 'ResNeSt', 'TridentResNet', 'CSPDarknet',
-    'SwinTransformer', 'PyramidVisionTransformer',
-    'PyramidVisionTransformerV2', 'EfficientNet', 'CSPNeXt'
+    'RegNet', 'ResNet', 'ResNetV1d', 'ResNeXt', 'SSDVGG', 'HRNet', 'Res2Net',
+    'HourglassNet', 'DetectoRS_ResNet', 'DetectoRS_ResNeXt', 'Darknet',
+    'ResNeSt', 'TridentResNet', 'CSPDarknet', 'SwinTransformer',
+    'PyramidVisionTransformer', 'PyramidVisionTransformerV2', 'EfficientNet',
+    'CSPNeXt', 'ResNetADownStem', 'ResNetADownStages', 'ResNetADownParallel'
 ]

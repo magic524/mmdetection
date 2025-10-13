@@ -17,6 +17,7 @@ from .positional_encoding import (LearnedPositionalEncoding,
                                   SinePositionalEncoding3D)
 from .res_layer import ResLayer, SimplifiedBasicBlock
 from .se_layer import ChannelAttention, DyReLU, SELayer
+from .adown import ADownGatedV3, BlurPool, ECAAttention
 # yapf: disable
 from .transformer import (MLP, AdaptivePadding, CdnQueryGenerator,
                           ConditionalAttention,
@@ -46,7 +47,7 @@ __all__ = [
     'MSDeformAttnPixelDecoder', 'ResLayer', 'PatchMerging',
     'SinePositionalEncoding', 'LearnedPositionalEncoding', 'DynamicConv',
     'SimplifiedBasicBlock', 'NormedLinear', 'NormedConv2d', 'InvertedResidual',
-    'SELayer', 'ConvUpsample', 'CSPLayer', 'adaptive_avg_pool2d',
+    'SELayer', 'ADownGatedV3', 'BlurPool', 'ECAAttention', 'ConvUpsample', 'CSPLayer', 'adaptive_avg_pool2d',
     'AdaptiveAvgPool2d', 'PatchEmbed', 'nchw_to_nlc', 'nlc_to_nchw', 'DyReLU',
     'ExpMomentumEMA', 'inverse_sigmoid', 'ChannelAttention', 'SiLU', 'MLP',
     'DetrTransformerEncoderLayer', 'DetrTransformerDecoderLayer',
