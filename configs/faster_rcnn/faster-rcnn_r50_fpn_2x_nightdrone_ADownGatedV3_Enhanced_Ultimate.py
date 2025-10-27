@@ -11,31 +11,27 @@ env_cfg = dict(
     dist_cfg=dict(backend='nccl')
 )
 
-# 覆盖默认的 checkpoint hook：只保留最佳和最后一轮的权重，以节省磁盘空间
 default_hooks = dict(
     checkpoint=dict(
         type='CheckpointHook',
-        interval=4,  # 2x训练时间更长，每4个epoch保存一次
+        interval=4,
         save_best='auto',
         save_last=True,
-        max_keep_ckpts=2,  # 2x版本保留更多checkpoint便于分析
+        max_keep_ckpts=3,  # 保留更多版本便于分析
     )
 )
 
-# -------------------- 自定义训练配置：2x版本（48 epochs） --------------------
+# -------------------- 极致训练配置：2x版本 --------------------
 train_cfg = dict(max_epochs=48)
-# 对应的学习率调度：在第 36 和 44 轮下降
 param_scheduler = [
     dict(type='MultiStepLR', by_epoch=True, milestones=[36, 44], gamma=0.1)
 ]
 
 # -------------------- 数据集配置 --------------------
 dataset_type = 'CocoDataset'
-# Windows 路径 E:\Datasets\Nighttime_Dataset\NightDrone\ 已转换为 WSL 格式
 data_root = '/data/Nighttime_Dataset/NightDrone/'
 img_scale = (1333, 800)
 
-# 根据 NightDrone.yaml 的 names 列表设置类别（保持索引顺序）
 classes = (
     'car',
     'truck',
@@ -64,7 +60,7 @@ val_pipeline = [
 
 # -------------------- 数据加载配置 --------------------
 train_dataloader = dict(
-    batch_size=2,
+    batch_size=1,  # 极致版本可能需要更大显存，减少batch size
     num_workers=2,
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=True),
@@ -101,7 +97,7 @@ val_evaluator = dict(
     metric='bbox',
     format_only=False,
     classwise=True,
-    outfile_prefix='./work_dirs/nightdrone_fpn_adown_v3d_2x/val'
+    outfile_prefix='./work_dirs/nightdrone_fpn_adown_enhanced_ultimate_2x/val'
 )
 
 test_evaluator = dict(
@@ -110,33 +106,73 @@ test_evaluator = dict(
     metric='bbox',
     format_only=False,
     classwise=True,
-    outfile_prefix='./work_dirs/nightdrone_fpn_adown_v3d_2x/test'
+    outfile_prefix='./work_dirs/nightdrone_fpn_adown_enhanced_ultimate_2x/test'
 )
 
-# -------------------- 模型配置：V3d - 禁用注意力 + 最优平滑配置 --------------------
+# -------------------- 🚀 极致增强模型配置：最大化ADownGatedV3部署 🚀 --------------------
 model = dict(
     neck=dict(
-        type='FPN_ADown',
+        type='FPN_ADown_Enhanced',
         in_channels=[256, 512, 1024, 2048],
         out_channels=256,
-        num_outs=5,
-        add_extra_convs=True, ## ← 启用 ADownGatedV3 生成 P6
-        # ADownGatedV3配置：V3d版本 - 简化版本，专注gating机制
+        num_outs=6,  # ✓ 增加到P6 (更多尺度用于小目标检测)
+        add_extra_convs=True,
+        
+        # ★★★ 极致增强配置 ★★★
+        enhance_bottom_up=True,         # ✓ 启用底向上增强路径
+        multi_scale_adown=True,         # ✓ 启用多尺度lateral ADown (极致版)
+        
+        # ★ ADownGatedV3 极致夜间优化配置 ★
         adown_cfg=dict(
             ks=3,
-            use_blur=True,       # 启用抗混叠去噪
-            gate_temp=1.0,       # 标准温度值
-            use_at=False,        # 禁用ECA注意力，减少参数复杂度
-            use_fuse=True,       # 保留特征融合
-            learnable_temp=True, # 启用可学习温度
-            pre_smooth=True      # 启用轻微预平滑，进一步降噪
+            use_blur=True,              # ✓ 抗混叠模糊
+            gate_temp=0.6,              # ✓ 更低温度，极致敏感门控
+            use_at=True,                # ✓ 启用ECA注意力
+            use_fuse=True,              # ✓ 特征融合
+            learnable_temp=True,        # ✓ 可学习温度参数
+            pre_smooth=True             # ✓ 预平滑处理
+        ),
+        
+        # ★ 极致底向上增强路径配置 ★
+        enhance_cfg=dict(
+            enable_p2p3=True,           # ✓ P2->P3启用 (极致版包含浅层)
+            enable_p3p4=True,           # ✓ P3->P4启用
+            enable_p4p5=True,           # ✓ P4->P5启用
+            adown_channels=160          # ✓ 增加增强路径通道数
         )
     )
 )
 
-# -------------------- 优化器配置：2x版本适当降低初始学习率 --------------------
+# -------------------- 极致优化器配置：适应复杂架构 --------------------
 optim_wrapper = dict(
     type='OptimWrapper',
-    optimizer=dict(type='SGD', lr=0.002, momentum=0.9, weight_decay=0.0001),  # 2x版本用标准学习率
-    clip_grad=dict(max_norm=35, norm_type=2)  # 梯度裁剪防止发散
+    optimizer=dict(
+        type='AdamW',  # 使用 AdamW 优化器，更适合复杂模型
+        lr=0.0001,     # 降低学习率
+        betas=(0.9, 0.999),
+        weight_decay=0.05,
+        eps=1e-8
+    ),
+    clip_grad=dict(max_norm=50, norm_type=2)  # 更强的梯度裁剪
 )
+
+# -------------------- 自定义学习率调度 --------------------
+param_scheduler = [
+    # Warmup
+    dict(
+        type='LinearLR',
+        start_factor=0.001,
+        by_epoch=False,
+        begin=0,
+        end=1000
+    ),
+    # Main LR schedule  
+    dict(
+        type='MultiStepLR',
+        by_epoch=True,
+        milestones=[32, 40, 46],  # 更细致的学习率衰减
+        gamma=0.1,
+        begin=0,
+        end=48
+    )
+]

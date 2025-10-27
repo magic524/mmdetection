@@ -101,7 +101,7 @@ val_evaluator = dict(
     metric='bbox',
     format_only=False,
     classwise=True,
-    outfile_prefix='./work_dirs/nightdrone_fpn_adown_v3d_2x/val'
+    outfile_prefix='./work_dirs/nightdrone_fpn_adown_enhanced_2x/val'
 )
 
 test_evaluator = dict(
@@ -110,33 +110,51 @@ test_evaluator = dict(
     metric='bbox',
     format_only=False,
     classwise=True,
-    outfile_prefix='./work_dirs/nightdrone_fpn_adown_v3d_2x/test'
+    outfile_prefix='./work_dirs/nightdrone_fpn_adown_enhanced_2x/test'
 )
 
-# -------------------- 模型配置：V3d - 禁用注意力 + 最优平滑配置 --------------------
+# -------------------- 增强模型配置：全面部署 ADownGatedV3 --------------------
 model = dict(
     neck=dict(
-        type='FPN_ADown',
+        type='FPN_ADown_Enhanced',
         in_channels=[256, 512, 1024, 2048],
         out_channels=256,
         num_outs=5,
-        add_extra_convs=True, ## ← 启用 ADownGatedV3 生成 P6
-        # ADownGatedV3配置：V3d版本 - 简化版本，专注gating机制
+        add_extra_convs=False,  # ✓ 是否启用额外层的ADown
+        
+        # ★★★ 核心增强配置 ★★★
+        enhance_bottom_up=True,     # ✓ 启用底向上增强路径
+        multi_scale_adown=False,    # ✗ 暂不启用多尺度lateral ADown (可能过度复杂)
+        
+        # ★ ADownGatedV3 夜间优化配置 ★
         adown_cfg=dict(
             ks=3,
-            use_blur=True,       # 启用抗混叠去噪
-            gate_temp=1.0,       # 标准温度值
-            use_at=False,        # 禁用ECA注意力，减少参数复杂度
-            use_fuse=True,       # 保留特征融合
-            learnable_temp=True, # 启用可学习温度
-            pre_smooth=True      # 启用轻微预平滑，进一步降噪
+            use_blur=True,          # ✓ 抗混叠模糊，减少夜间噪声
+            gate_temp=0.8,          # ✓ 降低温度，增强门控敏感性
+            use_at=True,            # ✓ 启用ECA注意力，提升特征选择
+            use_fuse=True,          # ✓ 特征融合
+            learnable_temp=True,    # ✓ 可学习温度参数
+            pre_smooth=True         # ✓ 预平滑处理，进一步降噪
+        ),
+        
+        # ★ 底向上增强路径配置 ★ 
+        enhance_cfg=dict(
+            enable_p2p3=False,      # ✗ P2->P3不启用 (避免过拟合浅层特征)
+            enable_p3p4=True,       # ✓ P3->P4启用 (中层特征增强)
+            enable_p4p5=True,       # ✓ P4->P5启用 (深层特征增强)
+            adown_channels=128      # ✓ 增强路径通道数
         )
     )
 )
 
-# -------------------- 优化器配置：2x版本适当降低初始学习率 --------------------
+# -------------------- 优化器配置：针对增强架构调整 --------------------
 optim_wrapper = dict(
     type='OptimWrapper',
-    optimizer=dict(type='SGD', lr=0.002, momentum=0.9, weight_decay=0.0001),  # 2x版本用标准学习率
-    clip_grad=dict(max_norm=35, norm_type=2)  # 梯度裁剪防止发散
+    optimizer=dict(
+        type='SGD', 
+        lr=0.0018,  # 稍微降低学习率，因为模型更复杂
+        momentum=0.9, 
+        weight_decay=0.0001
+    ),
+    clip_grad=dict(max_norm=40, norm_type=2)  # 增加梯度裁剪强度
 )

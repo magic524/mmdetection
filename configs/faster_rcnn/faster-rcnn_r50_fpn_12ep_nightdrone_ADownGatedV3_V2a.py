@@ -97,6 +97,7 @@ model = dict(
         norm_cfg=dict(type='BN', requires_grad=True),
         norm_eval=True,
         style='pytorch',
+        add_extra_convs=True
         init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet50'),
         adown_stage_cfg={
             4: dict(

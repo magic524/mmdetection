@@ -120,6 +120,7 @@ model = dict(
         in_channels=[256, 512, 1024, 2048],
         out_channels=256,
         num_outs=5,
+        add_extra_convs=True, ## ← 启用 ADownGatedV3 生成 P6
         # ADownGatedV3配置：V3c版本 - 偏向边缘保持，适合夜间小目标
         adown_cfg=dict(
             ks=3,

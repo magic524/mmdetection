@@ -1,5 +1,6 @@
 _base_ = [
     '../_base_/models/faster-rcnn_r50_fpn.py',
+    # 不继承 coco_detection.py，全部数据配置自行定义
     '../_base_/schedules/schedule_2x.py',
     '../_base_/default_runtime.py'
 ]
@@ -11,41 +12,39 @@ env_cfg = dict(
     dist_cfg=dict(backend='nccl')
 )
 
-# 覆盖默认的 checkpoint hook：只保留最佳和最后一轮的权重，以节省磁盘空间
-default_hooks = dict(
-    checkpoint=dict(
-        type='CheckpointHook',
-        interval=1,
-        save_best='auto',
-        save_last=True,
-        max_keep_ckpts=1,
-    )
-)
-
 # -------------------- 自定义训练配置 --------------------
-# 减少训练轮数为 12 以便快速实验
-train_cfg = dict(max_epochs=12)
-# 对应的学习率调度：在第 8 和 11 轮下降
+train_cfg = dict(max_epochs=48)
 param_scheduler = [
-    dict(type='MultiStepLR', by_epoch=True, milestones=[8, 11], gamma=0.1)
+    dict(type='MultiStepLR', by_epoch=True, milestones=[36, 44], gamma=0.1)
 ]
 
 # -------------------- 数据集配置 --------------------
 dataset_type = 'CocoDataset'
-# Windows 路径 E:\Datasets\Nighttime_Dataset\NightDrone\ 已转换为 WSL 格式
-data_root = '/data/Nighttime_Dataset/NightDrone/'
+# Windows 路径 E:\Datasets\Nighttime_Dataset\ExDark\ 已通过 docker 挂载为 /data/Nighttime_Dataset/ExDark/
+data_root = '/data/Nighttime_Dataset/ExDark/'
 img_scale = (1333, 800)
 
-# 根据 NightDrone.yaml 的 names 列表设置类别（保持索引顺序）
+# 根据 Dark.yaml 的 names 列表设置类别（保持索引顺序）
 classes = (
-    'car',
-    'truck',
-    'motor',
-    'pedestrian',
-    'van',
-    'tricycle',
-    'people',
-    'bus'
+    'Bicycle',
+    'Boat',
+    'Bottle',
+    'Bus',
+    'Car',
+    'Cat',
+    'Chair',
+    'Cup',
+    'Dog',
+    'Motorbike',
+    'People',
+    'Table'
+)
+
+# -------------------- Model配置（修改num_classes） --------------------
+model = dict(
+    roi_head=dict(
+        bbox_head=dict(num_classes=12)  # ExDark有12个类别
+    )
 )
 
 # -------------------- 数据流水线 --------------------
@@ -58,6 +57,12 @@ train_pipeline = [
 ]
 
 val_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(type='Resize', scale=img_scale, keep_ratio=True),
+    dict(type='PackDetInputs')
+]
+
+test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='Resize', scale=img_scale, keep_ratio=True),
     dict(type='PackDetInputs')
@@ -83,6 +88,8 @@ val_dataloader = dict(
     batch_size=1,
     num_workers=2,
     persistent_workers=True,
+    drop_last=False,
+    sampler=dict(type='DefaultSampler', shuffle=False),
     dataset=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_val.json',
@@ -93,7 +100,21 @@ val_dataloader = dict(
     )
 )
 
-test_dataloader = val_dataloader
+test_dataloader = dict(
+    batch_size=1,
+    num_workers=2,
+    persistent_workers=True,
+    drop_last=False,
+    sampler=dict(type='DefaultSampler', shuffle=False),
+    dataset=dict(
+        type=dataset_type,
+        ann_file=data_root + 'annotations/instances_test.json',
+        data_prefix=dict(img=data_root + 'images/'),
+        metainfo=dict(classes=classes),
+        test_mode=True,
+        pipeline=test_pipeline
+    )
+)
 
 # -------------------- 评估器配置 --------------------
 val_evaluator = dict(
@@ -102,41 +123,37 @@ val_evaluator = dict(
     metric='bbox',
     format_only=False,
     classwise=True,
-    outfile_prefix='./work_dirs/nightdrone_fpn_adown/val'
+    outfile_prefix='./work_dirs/exdark/val'
 )
 
 test_evaluator = dict(
     type='CocoMetric',
-    ann_file=data_root + 'annotations/instances_val.json',
+    ann_file=data_root + 'annotations/instances_test.json',
     metric='bbox',
     format_only=False,
     classwise=True,
-    outfile_prefix='./work_dirs/nightdrone_fpn_adown/test'
-)
-
-# -------------------- 模型配置：使用FPN_ADown neck --------------------
-model = dict(
-    neck=dict(
-        type='FPN_ADown',
-        in_channels=[256, 512, 1024, 2048],
-        out_channels=256,
-        num_outs=5,
-        add_extra_convs=True, ## ← 启用 ADownGatedV3 生成 P6
-        # ADownGatedV3配置：针对夜间场景优化
-        adown_cfg=dict(
-            ks=3,
-            use_blur=True,      # 启用抗混叠，有助于夜间图像去噪
-            gate_temp=1.2,      # 稍高的温度值，使gating更平滑
-            use_at=True,        # 启用ECA注意力机制
-            use_fuse=True,      # 启用特征融合
-            learnable_temp=False,  # 固定温度值以保持稳定
-            pre_smooth=False    # 不启用预平滑，避免过度模糊
-        )
-    )
+    outfile_prefix='./work_dirs/exdark/test'
 )
 
 # -------------------- 优化器配置 --------------------
 optim_wrapper = dict(
     type='OptimWrapper',
-    optimizer=dict(type='SGD', lr=0.002, momentum=0.9, weight_decay=0.0001)
+    optimizer=dict(type='SGD', lr=0.002, momentum=0.9, weight_decay=0.0001))
+
+# -------------------- 默认运行时配置 --------------------
+default_hooks = dict(
+    checkpoint=dict(
+        type='CheckpointHook',
+        interval=1,  # 每个epoch保存一次
+        max_keep_ckpts=1,  # 只保留最近1个checkpoint
+        save_best='auto',  # 自动保存最好的模型（基于验证集指标）
+        rule='greater'  # 指标越大越好（如mAP）
+    )
+)
+
+# -------------------- 可视化配置（可选） --------------------
+visualizer = dict(
+    type='DetLocalVisualizer',
+    vis_backends=[dict(type='LocalVisBackend')],
+    name='visualizer'
 )

@@ -121,6 +121,7 @@ model = dict(
         in_channels=[256, 512, 1024, 2048],
         out_channels=256,
         num_outs=5,
+        add_extra_convs=True,  # ✓ 必须添加这一行启用ADownGatedV3！
         # ADownGatedV3配置：V3d版本 - 简化版本，专注gating机制
         adown_cfg=dict(
             ks=3,
