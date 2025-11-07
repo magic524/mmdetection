@@ -14,24 +14,39 @@ class ResNetADownStages(ResNet):
 
     Strategy:
     - Keep original stem (conv1 + bn + relu + maxpool) to preserve ImageNet-aligned early features
-      since replacing maxpool hurt accuracy in your tests.
-    - For stages with stride=2 (typical: layer2, layer3, layer4 in ResNet-50), insert an
-      ADownGatedV3 before the first block to perform spatial downsampling, then set the
-      first block stride to 1 (so ADown handles the downsample). Channels are kept intact.
+    - Replace the stride=2 conv3x3 in the first bottleneck of each stage with ADownGatedV3
+    - Inspired by YOLO11-ADownGatedV3-V13 parameter design:
+        * Layer2 (C3, shallow): strong smoothing, no attention (use_blur=True, gate_temp=1.5)
+        * Layer3 (C4, middle):  balanced (use_blur=True, gate_temp=1.0, attention on)
+        * Layer4 (C5, deep):    edge-focused (use_blur=False, gate_temp=0.8, attention on)
 
-    Config knobs via `adown_stage_cfg` per stage index (1-based layer index):
-        adown_stage_cfg = dict(
-            2=dict(ks=3, use_blur=True, gate_temp=1.5, use_at=False, use_fuse=False, learnable_temp=False),
-            3=dict(ks=3, use_blur=True, gate_temp=1.0, use_at=True,  use_fuse=False, learnable_temp=False),
-            4=dict(ks=3, use_blur=False, gate_temp=0.8, use_at=True, use_fuse=False, learnable_temp=False),
-        )
-    If a stage is absent in the dict, it falls back to standard stride conv in the block.
+    Default config per stage (optimized for night vision):
+        adown_stage_cfg = {
+            2: dict(ks=3, use_blur=True,  gate_temp=1.5, use_at=False, use_fuse=False, 
+                    learnable_temp=False, pre_smooth=False),  # C3: noise suppression
+            3: dict(ks=3, use_blur=True,  gate_temp=1.0, use_at=True,  use_fuse=False, 
+                    learnable_temp=False, pre_smooth=False),  # C4: balanced
+            4: dict(ks=3, use_blur=False, gate_temp=0.8, use_at=True,  use_fuse=False, 
+                    learnable_temp=False, pre_smooth=False),  # C5: edge preservation
+        }
     """
 
     def __init__(self, *args,
                  adown_stage_cfg: Optional[dict] = None,
                  **kwargs):
-        self._adown_stage_cfg = adown_stage_cfg or {}
+        # 默认配置（参考YOLO11-V13）
+        default_cfg = {
+            2: dict(ks=3, use_blur=True,  gate_temp=1.5, use_at=False, use_fuse=False, 
+                    learnable_temp=False, pre_smooth=False),
+            3: dict(ks=3, use_blur=True,  gate_temp=1.0, use_at=True,  use_fuse=False, 
+                    learnable_temp=False, pre_smooth=False),
+            4: dict(ks=3, use_blur=False, gate_temp=0.8, use_at=True,  use_fuse=False, 
+                    learnable_temp=False, pre_smooth=False),
+        }
+        # 如果用户提供了配置，则合并
+        if adown_stage_cfg:
+            default_cfg.update(adown_stage_cfg)
+        self._adown_stage_cfg = default_cfg
         super().__init__(*args, **kwargs)
 
     def make_res_layer(self, **kwargs):  # override
