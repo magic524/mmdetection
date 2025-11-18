@@ -1,0 +1,11 @@
+## 获取文件权限
+sudo chown -R magic524:magic524  /home/magic524/projects/mmdetection/mmdetection/work_dirs
+
+## 进入镜像
+docker exec -it 0e2aa3ae8bd2 /bin/bash
+
+### 训练
+python tools/train.py <配置文件路径> <结果存储路径>
+
+### 测试参数量和计算复杂度
+python tools/analysis_tools/get_flops.py <配置文件路径>

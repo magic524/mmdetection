@@ -37,7 +37,7 @@
 #   --work-dir work_dirs/faster_rcnn/NightDrone/backbone/nightdrone_adown_stages_scratch_2x
 
 # ================================================================================
-# ResNet101 从头训练实验（方案1：ADownStages - 参数增加）
+# ResNet101 
 # ================================================================================
 # # ExDark 
 # python tools/train.py \
@@ -58,25 +58,25 @@
 #   --work-dir work_dirs/faster_rcnn/NightDrone/backbone/nightdrone_r101_adown_stages_scratch_2x
 
 # ================================================================================
-# 方案2：ResNetADownReplace - ADown替换Bottleneck（参数减少）
+# ResNetADownReplace (方案2: 直接替换Conv，参数量更低)
 # ================================================================================
-# ExDark 数据集
-python tools/train.py \
-  configs/faster_rcnn/faster-rcnn_r50-adown-replace_fpn_scratch_2x_exdark.py \
-  --work-dir work_dirs/faster_rcnn/ExDark/backbone_v2/exdark_r50_adown_replace_scratch_2x
+# # ExDark 数据集
+# python tools/train.py \
+#   configs/faster_rcnn/faster-rcnn_r50-adown-replace_fpn_scratch_2x_exdark.py \
+#   --work-dir work_dirs/faster_rcnn/ExDark/backbone/exdark_r50_adown_replace_scratch_2x
 
-python tools/train.py \
-  configs/faster_rcnn/faster-rcnn_r101-adown-replace_fpn_scratch_2x_exdark.py \
-  --work-dir work_dirs/faster_rcnn/ExDark/backbone_v2/exdark_r101_adown_replace_scratch_2x
+# python tools/train.py \
+#   configs/faster_rcnn/faster-rcnn_r101-adown-replace_fpn_scratch_2x_exdark.py \
+#   --work-dir work_dirs/faster_rcnn/ExDark/backbone/exdark_r101_adown_replace_scratch_2x
 
-# NightDrone 数据集
-python tools/train.py \
-  configs/faster_rcnn/faster-rcnn_r50-adown-replace_fpn_scratch_2x_nightdrone.py \
-  --work-dir work_dirs/faster_rcnn/NightDrone/backbone_v2/nightdrone_r50_adown_replace_scratch_2x
+# # NightDrone 数据集
+# python tools/train.py \
+#   configs/faster_rcnn/faster-rcnn_r50-adown-replace_fpn_scratch_2x_nightdrone.py \
+#   --work-dir work_dirs/faster_rcnn/NightDrone/backbone/nightdrone_r50_adown_replace_scratch_2x
 
-python tools/train.py \
-  configs/faster_rcnn/faster-rcnn_r101-adown-replace_fpn_scratch_2x_nightdrone.py \
-  --work-dir work_dirs/faster_rcnn/NightDrone/backbone_v2/nightdrone_r101_adown_replace_scratch_2x
+# python tools/train.py \
+#   configs/faster_rcnn/faster-rcnn_r101-adown-replace_fpn_scratch_2x_nightdrone.py \
+#   --work-dir work_dirs/faster_rcnn/NightDrone/backbone/nightdrone_r101_adown_replace_scratch_2x
 
 #!/bin/bash
 
@@ -141,3 +141,37 @@ python tools/train.py \
 # # Flops: 0.404T
 # # Params: 65.136M
 # # ==============================
+
+###replace
+# 测试 ResNet50-ADownStages
+# python tools/analysis_tools/get_flops.py \
+#     configs/faster_rcnn/faster-rcnn_r50-adown-replace_fpn_scratch_2x_nightdrone.py \
+#     --cfg-options model.test_cfg.rcnn.max_per_img=100
+
+# ==============================
+# Use size divisor set input shape from (1080, 1920) to (768, 1344)
+# ==============================
+# Use size divisor set input shape from (1080, 1920) to (768, 1344)
+# ==============================
+# Compute type: dataloader: load a picture from the dataset
+# Input shape: (768, 1344)
+# Flops: 0.319T
+# Params: 40.462M
+# ==============================
+
+# 测试 ResNet101-ADownStages
+# python tools/analysis_tools/get_flops.py \
+#     configs/faster_rcnn/faster-rcnn_r101-adown-replace_fpn_scratch_2x_nightdrone.py \
+#     --cfg-options model.test_cfg.rcnn.max_per_img=100
+
+# ==============================
+# Use size divisor set input shape from (1080, 1920) to (768, 1344)
+# ==============================
+# Compute type: dataloader: load a picture from the dataset
+# Input shape: (768, 1344)
+# Flops: 0.395T
+# Params: 59.454M
+# ==============================
+
+###251118
+python tools/train.py configs/faster_rcnn/faster-rcnn_r101_fpn_scratch_2x_visdrone.py --work-dir work_dirs/faster_rcnn/VisDrone/faster-rcnn_r101_fpn_2x_visdrone_scratch_2x

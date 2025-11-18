@@ -15,6 +15,7 @@ from .resnest import ResNeSt
 from .resnet import ResNet, ResNetV1d
 from .resnet_adown import ResNetADownStem
 from .resnet_adown_stages import ResNetADownStages
+from .resnet_adown_replace import ResNetADownReplace
 from .resnext import ResNeXt
 from .ssd_vgg import SSDVGG
 from .swin import SwinTransformer
@@ -28,5 +29,6 @@ __all__ = [
     'HourglassNet', 'DetectoRS_ResNet', 'DetectoRS_ResNeXt', 'Darknet',
     'ResNeSt', 'TridentResNet', 'CSPDarknet', 'SwinTransformer',
     'PyramidVisionTransformer', 'PyramidVisionTransformerV2', 'EfficientNet',
-    'CSPNeXt', 'ResNetADownStem', 'ResNetADownStages', 'ResNetADownParallel'
+    'CSPNeXt', 'ResNetADownStem', 'ResNetADownStages', 'ResNetADownParallel',
+    'ResNetADownReplace'
 ]
